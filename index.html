@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -35,7 +35,7 @@ button{width:100%;padding:13px;border:none;border-radius:10px;background:#c0392b
 <body>
 
 <h1>🍲 广东冰箱菜谱助手</h1>
-<div class="sub">选2-4种食材 · 自动配菜谱 · 算卡路里</div>
+<div class="sub">选1-6种食材/调料 · 自动配菜谱 · 算卡路里</div>
 
 <div class="card">
   <div class="label">① 选食材 <span class="count" id="cnt">已选0种</span></div>
@@ -78,6 +78,7 @@ button{width:100%;padding:13px;border:none;border-radius:10px;background:#c0392b
   </div>
 
   <button onclick="go()">生成菜谱</button>
+  <div class="hint">至少选1种主料；选调料可精确定位菜谱</div>
 </div>
 
 <div id="out"><div class="empty">选好食材后点"生成菜谱"</div></div>
@@ -173,7 +174,7 @@ const CATS={
 "水果其他":["柠檬","菠萝","芒果","木瓜","雪梨","甘蔗","茅根","牛奶","椰浆","花生","芝麻","紫菜","海带","枸杞","红枣","梅菜","酸菜","绿豆","红豆","栗子","薏米"]
 };
 
-// ============ 菜谱库（700+道，已去重）============
+// ============ 菜谱库 ============
 const R=[
 {n:"番茄炒蛋",need:["番茄","鸡蛋"],opt:["葱","盐","糖","油"],m:"炒"},
 {n:"番茄焖鸡蛋粉丝娃娃菜",need:["番茄","鸡蛋","粉丝","娃娃菜"],opt:["生抽","蚝油","糖","盐","油","蒜"],m:"焖"},
@@ -284,7 +285,7 @@ const R=[
 {n:"香菇蒸肉饼",need:["猪肉","香菇"],opt:["生粉","生抽","糖"],m:"蒸"},
 {n:"豆豉蒸排骨",need:["猪排骨","豆豉"],opt:["蒜","生抽","生粉","油"],m:"蒸"},
 {n:"蒜蓉蒸排骨",need:["猪排骨","蒜"],opt:["生抽","生粉","油"],m:"蒸"},
-{n:"糖醋排骨",need:["猪排骨"],opt:["醋","生抽","糖","姜"],m:"焖"},
+{n:"糖醋排骨",need:["猪排骨"],opt:["醋","糖","生抽","姜","料酒"],m:"焖"},
 {n:"莲藕排骨汤",need:["猪排骨","莲藕"],opt:["姜","盐"],m:"煮"},
 {n:"冬瓜排骨汤",need:["猪排骨","冬瓜"],opt:["姜","盐"],m:"煮"},
 {n:"玉米胡萝卜排骨汤",need:["猪排骨","玉米","胡萝卜"],opt:["姜","盐"],m:"煮"},
@@ -672,7 +673,7 @@ function renderChips(){
       const k=el.dataset.k;
       const i=sel.indexOf(k);
       if(i>=0){sel.splice(i,1);el.classList.remove("active");}
-      else{if(sel.length>=4){alert("最多选4种食材");return;}sel.push(k);el.classList.add("active");}
+      else{if(sel.length>=6){alert("最多选6种食材/调料");return;}sel.push(k);el.classList.add("active");}
       $("cnt").textContent="已选"+sel.length+"种";
     };
   });
@@ -705,21 +706,28 @@ function go(){
   const custom=$("custom").value.trim();
   if(custom){
     custom.split(/[\s,，、]+/).forEach(x=>{
-      if(x&&DB[x]&&!sel.includes(x)&&sel.length<4)sel.push(x);
+      if(x&&DB[x]&&!sel.includes(x)&&sel.length<6)sel.push(x);
     });
     $("cnt").textContent="已选"+sel.length+"种";
     renderChips();
   }
-  if(sel.length<2){alert("至少选2种食材");return;}
+  if(sel.length<1){alert("至少选1种食材或调料");return;}
 
-  let matched=R.filter(r=>r.need.filter(x=>sel.includes(x)).length>=2);
+  // 主料命中 ≥1 即可
+  let matched=R.filter(r=>r.need.filter(x=>sel.includes(x)).length>=1);
   if(curMethod!=="全部") matched=matched.filter(r=>r.m===curMethod);
   if(curGroup!=="全部") matched=matched.filter(r=>groupOf(r)===curGroup);
 
   matched=matched.sort((a,b)=>{
+    // 主料命中数优先
     const ca=a.need.filter(x=>sel.includes(x)).length;
     const cb=b.need.filter(x=>sel.includes(x)).length;
     if(cb!==ca) return cb-ca;
+    // 再看调料命中数
+    const oa=(a.opt||[]).filter(x=>sel.includes(x)).length;
+    const ob=(b.opt||[]).filter(x=>sel.includes(x)).length;
+    if(ob!==oa) return ob-oa;
+    // 主料少的优先
     return a.need.length-b.need.length;
   }).slice(0,12);
 
